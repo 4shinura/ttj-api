@@ -4,17 +4,20 @@ namespace App\Service;
 
 use App\Entity\Offre;
 use App\Repository\OffreRepository;
+use App\Repository\RecruteurRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 class OffreService
 {
     private EntityManagerInterface $em;
     private OffreRepository $repo;
+    private RecruteurRepository $recruteurRepository;
 
-    public function __construct(EntityManagerInterface $em, OffreRepository $repo)
+    public function __construct(EntityManagerInterface $em, OffreRepository $repo, RecruteurRepository $recruteurRepository)
     {
         $this->em = $em;
         $this->repo = $repo;
+        $this->recruteurRepository = $recruteurRepository;
     }
 
     public function getOffres(): array
@@ -39,7 +42,8 @@ class OffreService
 
         // ici tu peux gérer le recruteur si tu passes l'id
         if (!empty($data['recruteur'])) {
-            $offre->setRecruteurOffre($data['recruteur']);
+            $recruteur = $this->recruteurRepository->find($data['recruteur']);
+            $offre->setRecruteurOffre($recruteur);
         }
 
         $this->em->persist($offre);
@@ -56,7 +60,8 @@ class OffreService
         if (isset($data['datePublication'])) $offre->setDatePublicationOffre(new \DateTime($data['datePublication']));
         if (isset($data['dateLimite'])) $offre->setDateLimiteOffre(new \DateTime($data['dateLimite']));
         if (isset($data['statut'])) $offre->setStatutOffre($data['statut']);
-        if (isset($data['recruteur'])) $offre->setRecruteurOffre($data['recruteur']);
+        $recruteur = $this->recruteurRepository->find($data['recruteur']);
+        if (isset($data['recruteur'])) $offre->setRecruteurOffre($recruteur);
 
         $this->em->flush();
 

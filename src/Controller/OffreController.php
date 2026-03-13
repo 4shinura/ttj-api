@@ -20,7 +20,7 @@ final class OffreController extends AbstractController
     }
 
     // LIST
-    #[Route('/list', name: 'list', methods: ['GET'])]
+    #[Route('/', name: 'list', methods: ['GET'])]
     public function getOffres(): JsonResponse
     {
         $offres = $this->service->getOffres();
@@ -66,7 +66,7 @@ final class OffreController extends AbstractController
     }
 
     // UPDATE
-    #[Route('/{id}', name: 'update', methods: ['PUT', 'PATCH'])]
+    #[Route('/{id}', name: 'update', methods: ['PUT'])]
     public function updateOffre(Request $request, int $id): JsonResponse
     {
         $offre = $this->service->getOffre($id);
