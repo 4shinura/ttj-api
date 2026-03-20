@@ -8,19 +8,22 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 use App\Entity\Offre;
 use App\Service\OffreService;
+use App\Service\AuthService;
 
-#[Route("/api/offres")]
+#[Route("/api")]
 final class OffreController extends AbstractController
 {
     private OffreService $service;
+    private AuthService $authService;
 
-    public function __construct(OffreService $service)
+    public function __construct(OffreService $service, AuthService $authService)
     {
         $this->service = $service;
+        $this->authService = $authService;
     }
 
     // LIST
-    #[Route('/', name: 'list', methods: ['GET'])]
+    #[Route('offres', name: 'list', methods: ['GET'])]
     public function getOffres(): JsonResponse
     {
         $offres = $this->service->getOffres();
@@ -38,7 +41,7 @@ final class OffreController extends AbstractController
     }
 
     // READ
-    #[Route('/{id}', name: 'show', methods: ['GET'])]
+    #[Route('offres/{id}', name: 'show', methods: ['GET'])]
     public function getOffre(int $id): JsonResponse
     {
         $offre = $this->service->getOffre($id);
@@ -56,7 +59,7 @@ final class OffreController extends AbstractController
     }
 
     // CREATE
-    #[Route('', name: 'create', methods: ['POST'])]
+    #[Route('offres', name: 'create', methods: ['POST'])]
     public function createOffre(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
@@ -66,7 +69,7 @@ final class OffreController extends AbstractController
     }
 
     // UPDATE
-    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    #[Route('offres/{id}', name: 'update', methods: ['PUT'])]
     public function updateOffre(Request $request, int $id): JsonResponse
     {
         $offre = $this->service->getOffre($id);
@@ -79,7 +82,7 @@ final class OffreController extends AbstractController
     }
 
     // DELETE
-    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
+    #[Route('offres/{id}', name: 'delete', methods: ['DELETE'])]
     public function deleteOffre(int $id): JsonResponse
     {
         $offre = $this->service->getOffre($id);
@@ -87,5 +90,27 @@ final class OffreController extends AbstractController
 
         $this->service->delete($offre);
         return $this->json(['success' => true]);
+    }
+
+    #[Route('recruteurs/offres', name: 'ses_offres', methods: ['GET'])]
+    public function voirSesOffres(Request $request): JsonResponse
+    {
+        $idUser = $this->authService->getConnectedUser($request)['userId'];
+        if (!$this->authService->isRecruteur($idUser)){
+            return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
+        }
+
+        $offres = $this->service->getOffresByRecruteur($idUser);
+        $data = array_map(fn(Offre $o) => [
+            'id' => $o->getId(),
+            'type' => $o->getTypeOffre(),
+            'titre' => $o->getTitreOffre(),
+            'description' => $o->getDescriptionOffre(),
+            'datePublication' => $o->getDatePublicationOffre()?->format('Y-m-d'),
+            'dateLimite' => $o->getDateLimiteOffre()?->format('Y-m-d'),
+            'statut' => $o->getStatutOffre(),
+        ], $offres);
+
+        return $this->json($data);
     }
 }

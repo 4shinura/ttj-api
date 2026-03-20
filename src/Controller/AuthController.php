@@ -7,6 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Cookie;
 
 #[Route('/api/auth')]
 class AuthController extends AbstractController
@@ -36,7 +37,7 @@ class AuthController extends AbstractController
             return $this->json(['error' => 'Identifiants invalides'], 401);
         }
 
-        return $this->json([
+        $response = $this->json([
             'message' => 'Connexion réussie',
             'user' => [
                 'id' => $user->getId(),
@@ -45,6 +46,18 @@ class AuthController extends AbstractController
                 'email' => $user->getEmailUtilisateur()
             ]
         ]);
+
+        $response->headers->setCookie(
+            Cookie::create('access_token')
+                ->withValue($user->getId())
+                ->withExpires(time() + 3600)
+                ->withPath('/')
+                ->withSecure(false)    // passe à true en production (HTTPS)
+                ->withHttpOnly(true)
+                ->withSameSite(Cookie::SAMESITE_STRICT)
+        );
+
+        return $response;
     }
 
     // #[Route('/logout', name: 'api_logout', methods: ['POST'])]

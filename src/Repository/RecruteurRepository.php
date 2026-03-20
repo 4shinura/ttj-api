@@ -16,6 +16,15 @@ class RecruteurRepository extends ServiceEntityRepository
         parent::__construct($registry, Recruteur::class);
     }
 
+    public function findByEmail(string $email): ?Recruteur
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.email_Utilisateur = :email')
+            ->setParameter('email', $email)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     /**
      * Retourne tous les recruteurs d'une entreprise donnée
      */
