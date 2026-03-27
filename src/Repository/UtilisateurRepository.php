@@ -16,7 +16,7 @@ class UtilisateurRepository extends ServiceEntityRepository
     public function findByEmail(string $email): ?Utilisateur
     {
         return $this->createQueryBuilder('u')
-            ->where('u.email_Utilisateur = :email')
+            ->where('LOWER(TRIM(u.email_Utilisateur)) = LOWER(TRIM(:email))')
             ->setParameter('email', $email)
             ->getQuery()
             ->getOneOrNullResult();

@@ -1,77 +1,160 @@
 <?php
+
 namespace App\Controller;
 
-use App\Service\UtilisateurService;
+use App\Entity\Candidat;
+use App\Entity\Recruteur;
+use App\Entity\Utilisateur;
+use App\Repository\UtilisateurRepository;
+use App\Service\AuthService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 
-#[Route('/api/utilisateurs', name: 'api_utilisateurs_')]
-class UtilisateurController extends AbstractController
+#[Route("/api/admin")]
+final class UtilisateurController extends AbstractController
 {
-    public function __construct(private UtilisateurService $service) {}
+    public function __construct(
+        private UtilisateurRepository $utilisateurRepo,
+        private AuthService $authService
+    ) {}
 
-    #[Route('', name: 'list', methods: ['GET'])]
-    public function list(): JsonResponse
+    #[Route('/utilisateurs', name: 'admin_utilisateurs_list', methods: ['GET'])]
+    public function list(Request $request): JsonResponse
     {
-        $users = $this->service->getAll();
-        $data = array_map(fn($u) => [
-            'id' => $u->getId(),
-            'nom' => $u->getNomUtilisateur(),
-            'prenom' => $u->getPrenomUtilisateur(),
-            'email' => $u->getEmailUtilisateur(),
-            'statut' => $u->getStatutUtilisateur()
-        ], $users);
+        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        if (!$this->authService->isAdmin($idUser)) {
+            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        }
+
+        $utilisateurs = $this->utilisateurRepo->findAll();
+        $data = array_map([$this, 'mapUtilisateurToArray'], $utilisateurs);
 
         return $this->json($data);
     }
 
-    #[Route('/{id}', name: 'show', methods: ['GET'])]
-    public function show(int $id): JsonResponse
+    #[Route('/utilisateurs', name: 'admin_utilisateur_create', methods: ['POST'])]
+    public function create(Request $request): JsonResponse
     {
-        $user = $this->service->getById($id);
-        if (!$user) return $this->json(['error' => 'Utilisateur non trouvé'], 404);
+        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        if (!$this->authService->isAdmin($idUser)) {
+            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        }
 
-        return $this->json([
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Payload invalide'], 400);
+        }
+
+        $requiredFields = ['nom', 'prenom', 'email', 'motDePasse', 'type'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                return $this->json(['error' => "Champ requis manquant : $field"], 400);
+            }
+        }
+
+        if (!in_array($data['type'], ['candidat', 'recruteur'])) {
+            return $this->json(['error' => 'Type invalide : doit être "candidat" ou "recruteur"'], 400);
+        }
+
+        // Vérifier si email existe déjà
+        $existingUser = $this->utilisateurRepo->findByEmail($data['email']);
+        if ($existingUser) {
+            return $this->json(['error' => 'Email déjà utilisé'], 409);
+        }
+
+        if ($data['type'] === 'candidat') {
+            $utilisateur = new Candidat();
+        } else {
+            $utilisateur = new Recruteur();
+        }
+
+        $utilisateur->setNomUtilisateur($data['nom']);
+        $utilisateur->setPrenomUtilisateur($data['prenom']);
+        $utilisateur->setEmailUtilisateur($data['email']);
+        $utilisateur->setMdpUtilisateur(password_hash($data['motDePasse'], PASSWORD_BCRYPT));
+        $utilisateur->setStatutUtilisateur('actif');
+
+        $this->utilisateurRepo->getEntityManager()->persist($utilisateur);
+        $this->utilisateurRepo->getEntityManager()->flush();
+
+        return $this->json($this->mapUtilisateurToArray($utilisateur), 201);
+    }
+
+    #[Route('/utilisateurs/{id}', name: 'admin_utilisateur_update', methods: ['PUT'])]
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        if (!$this->authService->isAdmin($idUser)) {
+            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        }
+
+        $utilisateur = $this->utilisateurRepo->find($id);
+        if (!$utilisateur) {
+            return $this->json(['error' => 'Utilisateur non trouvé'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Payload invalide'], 400);
+        }
+
+        if (isset($data['nom'])) $utilisateur->setNomUtilisateur($data['nom']);
+        if (isset($data['prenom'])) $utilisateur->setPrenomUtilisateur($data['prenom']);
+        if (isset($data['email'])) {
+            // Vérifier si email existe déjà pour un autre utilisateur
+            $existingUser = $this->utilisateurRepo->findByEmail($data['email']);
+            if ($existingUser && $existingUser->getId() !== $id) {
+                return $this->json(['error' => 'Email déjà utilisé'], 409);
+            }
+            $utilisateur->setEmailUtilisateur($data['email']);
+        }
+        if (isset($data['motDePasse'])) {
+            $utilisateur->setMdpUtilisateur(password_hash($data['motDePasse'], PASSWORD_BCRYPT));
+        }
+        if (isset($data['statut'])) $utilisateur->setStatutUtilisateur($data['statut']);
+
+        $this->utilisateurRepo->getEntityManager()->flush();
+
+        return $this->json($this->mapUtilisateurToArray($utilisateur));
+    }
+
+    #[Route('/utilisateurs/{id}', name: 'admin_utilisateur_delete', methods: ['DELETE'])]
+    public function delete(Request $request, int $id): JsonResponse
+    {
+        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        if (!$this->authService->isAdmin($idUser)) {
+            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        }
+
+        $utilisateur = $this->utilisateurRepo->find($id);
+        if (!$utilisateur) {
+            return $this->json(['error' => 'Utilisateur non trouvé'], 404);
+        }
+
+        // Empêcher la suppression d'un admin
+        if ($utilisateur->getStatutUtilisateur() === 'admin') {
+            return $this->json(['error' => 'Impossible de supprimer un administrateur'], 403);
+        }
+
+        $this->utilisateurRepo->getEntityManager()->remove($utilisateur);
+        $this->utilisateurRepo->getEntityManager()->flush();
+
+        return $this->json(['message' => 'Utilisateur supprimé']);
+    }
+
+    private function mapUtilisateurToArray(Utilisateur $user): array
+    {
+        $type = $user instanceof Candidat ? 'candidat' : ($user instanceof Recruteur ? 'recruteur' : 'inconnu');
+
+        return [
             'id' => $user->getId(),
             'nom' => $user->getNomUtilisateur(),
             'prenom' => $user->getPrenomUtilisateur(),
             'email' => $user->getEmailUtilisateur(),
-            'statut' => $user->getStatutUtilisateur()
-        ]);
-    }
-
-    #[Route('', name: 'create', methods: ['POST'])]
-    public function create(Request $request): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        $user = $this->service->create($data);
-
-        return $this->json([
-            'id' => $user->getId()
-        ], 201);
-    }
-
-    #[Route('/{id}', name: 'update', methods: ['PUT'])]
-    public function update(Request $request, int $id): JsonResponse
-    {
-        $user = $this->service->getById($id);
-        if (!$user) return $this->json(['error' => 'Utilisateur non trouvé'], 404);
-
-        $data = json_decode($request->getContent(), true);
-        $user = $this->service->update($user, $data);
-
-        return $this->json(['status' => 'ok']);
-    }
-
-    #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
-    public function delete(int $id): JsonResponse
-    {
-        $user = $this->service->getById($id);
-        if (!$user) return $this->json(['error' => 'Utilisateur non trouvé'], 404);
-
-        $this->service->delete($user);
-        return $this->json(['status' => 'deleted']);
+            'statut' => $user->getStatutUtilisateur(),
+            'type' => $type,
+        ];
     }
 }

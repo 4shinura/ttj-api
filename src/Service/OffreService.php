@@ -73,4 +73,10 @@ class OffreService
         $this->em->remove($offre);
         $this->em->flush();
     }
+
+    public function getOffresByRecruteur($idUser)
+    {
+        // throw new \Exception("Offres du recruteur $idUser : ");
+        return $this->repo->findBy(["recruteur_Offre" => $idUser]);
+    }
 }

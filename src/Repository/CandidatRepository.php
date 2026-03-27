@@ -16,7 +16,7 @@ class CandidatRepository extends ServiceEntityRepository
     public function findByEmail(string $email): ?Candidat
     {
         return $this->createQueryBuilder('c')
-            ->where('c.email_Utilisateur = :email')
+            ->where('LOWER(TRIM(c.email_Utilisateur)) = LOWER(TRIM(:email))')
             ->setParameter('email', $email)
             ->getQuery()
             ->getOneOrNullResult();

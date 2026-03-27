@@ -28,9 +28,21 @@ class CandidatureService
         return $this->repository->findByOffre($id);
     }
 
+    public function getById(int $id): ?Candidature
+    {
+        return $this->repository->find($id);
+    }
+
     public function create(Candidature $candidature): Candidature
     {
         $this->em->persist($candidature);
+        $this->em->flush();
+
+        return $candidature;
+    }
+
+    public function update(Candidature $candidature): Candidature
+    {
         $this->em->flush();
 
         return $candidature;

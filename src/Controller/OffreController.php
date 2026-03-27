@@ -23,7 +23,7 @@ final class OffreController extends AbstractController
     }
 
     // LIST
-    #[Route('offres', name: 'list', methods: ['GET'])]
+    #[Route('/offres', name: 'list', methods: ['GET'])]
     public function getOffres(): JsonResponse
     {
         $offres = $this->service->getOffres();
@@ -41,7 +41,7 @@ final class OffreController extends AbstractController
     }
 
     // READ
-    #[Route('offres/{id}', name: 'show', methods: ['GET'])]
+    #[Route('/offres/{id}', name: 'show', methods: ['GET'])]
     public function getOffre(int $id): JsonResponse
     {
         $offre = $this->service->getOffre($id);
@@ -59,47 +59,91 @@ final class OffreController extends AbstractController
     }
 
     // CREATE
-    #[Route('offres', name: 'create', methods: ['POST'])]
+    #[Route('/recruteurs/offres', name: 'create', methods: ['POST'])]
     public function createOffre(Request $request): JsonResponse
     {
+        $connected = $this->authService->getConnectedUser($request);
+        $idUser = (int) ($connected['userId'] ?? 0);
+
+        if (!$this->authService->isRecruteur($idUser)) {
+            return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
+        }
+
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Payload invalide'], 400);
+        }
+
+        $data['recruteur'] = $idUser;
         $offre = $this->service->create($data);
 
         return $this->json(['id' => $offre->getId()], 201);
     }
 
     // UPDATE
-    #[Route('offres/{id}', name: 'update', methods: ['PUT'])]
+    #[Route('/recruteurs/offres/{id}', name: 'update', methods: ['PUT'])]
     public function updateOffre(Request $request, int $id): JsonResponse
     {
+        $connected = $this->authService->getConnectedUser($request);
+        $idUser = (int) ($connected['userId'] ?? 0);
+
+        if (!$this->authService->isRecruteur($idUser)) {
+            return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
+        }
+
         $offre = $this->service->getOffre($id);
-        if (!$offre) return $this->json(['error' => 'Offre non trouvée'], 404);
+        if (!$offre) {
+            return $this->json(['error' => 'Offre non trouvée'], 404);
+        }
+
+        $recruteurOffre = $offre->getRecruteurOffre();
+        if (!$recruteurOffre || $recruteurOffre->getId() !== $idUser) {
+            return $this->json(['error' => 'Accès refusé : cette offre n\'appartient pas au recruteur'], 403);
+        }
 
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Payload invalide'], 400);
+        }
+
         $this->service->update($offre, $data);
 
         return $this->json(['success' => true]);
     }
 
     // DELETE
-    #[Route('offres/{id}', name: 'delete', methods: ['DELETE'])]
-    public function deleteOffre(int $id): JsonResponse
+    #[Route('/recruteurs/offres/{id}', name: 'delete', methods: ['DELETE'])]
+    public function deleteOffre(Request $request, int $id): JsonResponse
     {
+        $connected = $this->authService->getConnectedUser($request);
+        $idUser = (int) ($connected['userId'] ?? 0);
+
+        if (!$this->authService->isRecruteur($idUser)) {
+            return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
+        }
+
         $offre = $this->service->getOffre($id);
-        if (!$offre) return $this->json(['error' => 'Offre non trouvée'], 404);
+        if (!$offre) {
+            return $this->json(['error' => 'Offre non trouvée'], 404);
+        }
+
+        $recruteurOffre = $offre->getRecruteurOffre();
+        if (!$recruteurOffre || $recruteurOffre->getId() !== $idUser) {
+            return $this->json(['error' => 'Accès refusé : cette offre n\'appartient pas au recruteur'], 403);
+        }
 
         $this->service->delete($offre);
         return $this->json(['success' => true]);
     }
 
-    #[Route('recruteurs/offres', name: 'ses_offres', methods: ['GET'])]
-    public function voirSesOffres(Request $request): JsonResponse
+    #[Route('/recruteurs/offres', name: 'offres_recruteur', methods: ['GET'])]
+    public function voirOffresRecruteur(Request $request): JsonResponse
     {
         $idUser = $this->authService->getConnectedUser($request)['userId'];
         if (!$this->authService->isRecruteur($idUser)){
             return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
         }
-
+        
         $offres = $this->service->getOffresByRecruteur($idUser);
         $data = array_map(fn(Offre $o) => [
             'id' => $o->getId(),
@@ -110,6 +154,37 @@ final class OffreController extends AbstractController
             'dateLimite' => $o->getDateLimiteOffre()?->format('Y-m-d'),
             'statut' => $o->getStatutOffre(),
         ], $offres);
+
+        return $this->json($data);
+    }
+
+    #[Route('/recruteurs/offres/{id}', name: 'offre_recruteur', methods: ['GET'])]
+    public function voirOffreRecruteur(Request $request, int $id): JsonResponse
+    {
+        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        if (!$this->authService->isRecruteur($idUser)) {
+            return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
+        }
+
+        $offre = $this->service->getOffre($id);
+        if (!$offre) {
+            return $this->json(['error' => 'Offre non trouvée'], 404);
+        }
+
+        $recruteurOffre = $offre->getRecruteurOffre();
+        if (!$recruteurOffre || $recruteurOffre->getId() !== $idUser) {
+            return $this->json(['error' => 'Accès refusé : cette offre n\'appartient pas au recruteur'], 403);
+        }
+
+        $data = [
+            'id' => $offre->getId(),
+            'type' => $offre->getTypeOffre(),
+            'titre' => $offre->getTitreOffre(),
+            'description' => $offre->getDescriptionOffre(),
+            'datePublication' => $offre->getDatePublicationOffre()?->format('Y-m-d'),
+            'dateLimite' => $offre->getDateLimiteOffre()?->format('Y-m-d'),
+            'statut' => $offre->getStatutOffre(),
+        ];
 
         return $this->json($data);
     }

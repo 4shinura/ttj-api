@@ -30,7 +30,7 @@ class Utilisateur
     #[ORM\Column(length: 100)]
     private ?string $email_Utilisateur = null;
 
-    #[ORM\Column(length: 50)]
+    #[ORM\Column(length: 255)]
     private ?string $mdp_Utilisateur = null;
 
     #[ORM\Column(length: 50)]
