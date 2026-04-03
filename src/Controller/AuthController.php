@@ -8,6 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Cookie;
+use Symfony\Component\HttpFoundation\Response;
 
 #[Route("/api/auth")]
 class AuthController extends AbstractController
@@ -43,7 +44,9 @@ class AuthController extends AbstractController
                 'id' => $user->getId(),
                 'nom' => $user->getNomUtilisateur(),
                 'prenom' => $user->getPrenomUtilisateur(),
-                'email' => $user->getEmailUtilisateur()
+                'email' => $user->getEmailUtilisateur(),
+                'statut' => $user->getStatutUtilisateur(),
+                'type' => $user instanceof \App\Entity\Administrateur ? 'administrateur' : ($user instanceof \App\Entity\Recruteur ? 'recruteur' : 'candidat'),
             ]
         ]);
 
