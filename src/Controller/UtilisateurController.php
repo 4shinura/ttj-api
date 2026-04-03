@@ -34,6 +34,20 @@ final class UtilisateurController extends AbstractController
         return $this->json($data);
     }
 
+    #[Route('/registers/', name: 'admin_registers_pending', methods: ['GET'])]
+    public function listPendingRegistrations(Request $request): JsonResponse
+    {
+        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        if (!$this->authService->isAdmin($idUser)) {
+            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        }
+
+        $utilisateurs = $this->utilisateurRepo->findByStatus('pending');
+        $data = array_map([$this, 'mapUtilisateurToArray'], $utilisateurs);
+
+        return $this->json($data);
+    }
+
     #[Route('/utilisateurs', name: 'admin_utilisateur_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
@@ -156,5 +170,33 @@ final class UtilisateurController extends AbstractController
             'statut' => $user->getStatutUtilisateur(),
             'type' => $type,
         ];
+    }
+
+    #[Route('/registers/valider', name: 'admin_register_validate', methods: ['PUT'])]
+    public function validateRegistration(Request $request): JsonResponse
+    {
+        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        if (!$this->authService->isAdmin($idUser)) {
+            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data) || empty($data['id'])) {
+            return $this->json(['error' => 'Payload invalide : id requis'], 400);
+        }
+
+        $utilisateur = $this->utilisateurRepo->find((int) $data['id']);
+        if (!$utilisateur) {
+            return $this->json(['error' => 'Utilisateur non trouvé'], 404);
+        }
+
+        if (strtolower(trim((string) $utilisateur->getStatutUtilisateur())) !== 'pending') {
+            return $this->json(['error' => 'Statut invalide : l’utilisateur n’est pas en attente'], 400);
+        }
+
+        $utilisateur->setStatutUtilisateur('actif');
+        $this->utilisateurRepo->getEntityManager()->flush();
+
+        return $this->json(['success' => true, 'id' => $utilisateur->getId(), 'statut' => $utilisateur->getStatutUtilisateur()]);
     }
 }

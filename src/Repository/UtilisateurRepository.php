@@ -21,4 +21,13 @@ class UtilisateurRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    public function findByStatus(string $status): array
+    {
+        return $this->createQueryBuilder('u')
+            ->where('LOWER(TRIM(u.statut_Utilisateur)) = LOWER(TRIM(:status))')
+            ->setParameter('status', $status)
+            ->getQuery()
+            ->getResult();
+    }
 }

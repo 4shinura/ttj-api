@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\Candidat;
 use App\Entity\Recruteur;
+use App\Entity\Administrateur;
 use App\Entity\Utilisateur;
 use App\Repository\UtilisateurRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -85,7 +86,37 @@ class AuthService
     {
         $user = $this->repository->find($id);
 
-        return $user && $user->getStatutUtilisateur() === 'admin';
+        return $user instanceof Administrateur;
+    }
+
+    public function register(string $type, string $nom, string $prenom, string $email, string $motDePasse): Utilisateur
+    {
+        if (!in_array($type, ['candidat', 'recruteur'], true)) {
+            throw new \InvalidArgumentException('Type invalide : doit être "candidat" ou "recruteur".');
+        }
+
+        // email unique
+        $existing = $this->repository->findByEmail($email);
+        if ($existing) {
+            throw new \DomainException('Email déjà utilisé.');
+        }
+
+        if ($type === 'candidat') {
+            $utilisateur = new Candidat();
+        } else {
+            $utilisateur = new Recruteur();
+        }
+
+        $utilisateur->setNomUtilisateur($nom);
+        $utilisateur->setPrenomUtilisateur($prenom);
+        $utilisateur->setEmailUtilisateur($email);
+        $utilisateur->setMdpUtilisateur(password_hash($motDePasse, PASSWORD_BCRYPT));
+        $utilisateur->setStatutUtilisateur('pending');
+
+        $this->em->persist($utilisateur);
+        $this->em->flush();
+
+        return $utilisateur;
     }
 
     // public function getCurrentUserId(): ?int

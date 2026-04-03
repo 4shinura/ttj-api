@@ -20,14 +20,19 @@ class OffreService
         $this->recruteurRepository = $recruteurRepository;
     }
 
-    public function getOffres(): array
-    {
-        return $this->repo->findAll();
-    }
-
     public function getOffre(int $id): ?Offre
     {
         return $this->repo->find($id);
+    }
+
+    public function getPublishedOffres(): array
+    {
+        return $this->repo->findPublished();
+    }
+
+    public function getPublishedOffre(int $id): ?Offre
+    {
+        return $this->repo->findPublishedById($id);
     }
 
     public function create(array $data): Offre
@@ -74,9 +79,27 @@ class OffreService
         $this->em->flush();
     }
 
+    public function publishOffre(Offre $offre): Offre
+    {
+        $currentStatus = strtolower(trim($offre->getStatutOffre() ?? ''));
+        if (!in_array($currentStatus, ['pending', 'en attente'], true)) {
+            throw new \RuntimeException('Statut invalide : l’offre doit être en attente pour être publiée.');
+        }
+
+        $offre->setStatutOffre('published');
+        $this->em->flush();
+
+        return $offre;
+    }
+
     public function getOffresByRecruteur($idUser)
     {
         // throw new \Exception("Offres du recruteur $idUser : ");
         return $this->repo->findBy(["recruteur_Offre" => $idUser]);
+    }
+
+    public function getOffresByStatus(string $status): array
+    {
+        return $this->repo->findByStatus($status);
     }
 }

@@ -11,7 +11,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\DiscriminatorColumn(name: "type", type: "string")]
 #[ORM\DiscriminatorMap([
     "candidat" => Candidat::class,
-    "recruteur" => Recruteur::class
+    "recruteur" => Recruteur::class,
+    "administrateur" => Administrateur::class,
 ])]
 #[ORM\Entity(repositoryClass: UtilisateurRepository::class)]
 class Utilisateur

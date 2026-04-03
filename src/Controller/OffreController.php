@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 use App\Entity\Offre;
 use App\Service\OffreService;
 use App\Service\AuthService;
+use Exception;
 
 #[Route("/api")]
 final class OffreController extends AbstractController
@@ -26,7 +27,7 @@ final class OffreController extends AbstractController
     #[Route('/offres', name: 'list', methods: ['GET'])]
     public function getOffres(): JsonResponse
     {
-        $offres = $this->service->getOffres();
+        $offres = $this->service->getPublishedOffres();
         $data = array_map(fn(Offre $o) => [
             'id' => $o->getId(),
             'type' => $o->getTypeOffre(),
@@ -44,7 +45,7 @@ final class OffreController extends AbstractController
     #[Route('/offres/{id}', name: 'show', methods: ['GET'])]
     public function getOffre(int $id): JsonResponse
     {
-        $offre = $this->service->getOffre($id);
+        $offre = $this->service->getPublishedOffre($id);
         if (!$offre) return $this->json(['error' => 'Offre non trouvée'], 404);
 
         return $this->json([
@@ -187,5 +188,51 @@ final class OffreController extends AbstractController
         ];
 
         return $this->json($data);
+    }
+
+    // ADMIN - GET PENDING OFFERS
+    #[Route('/admin/offres', name: 'admin_pending_offers', methods: ['GET'])]
+    public function getOffresByStatus(Request $request): JsonResponse
+    {
+        $idUser = $this->authService->getConnectedUser($request)['userId'];
+        if (!$this->authService->isAdmin($idUser)){
+            return $this->json(['error' => 'Accès refusé : utilisateur non administrateur'], 403);
+        }
+
+        $offres = $this->service->getOffresByStatus('pending');
+        $data = array_map(fn(Offre $o) => [
+            'id' => $o->getId(),
+            'type' => $o->getTypeOffre(),
+            'titre' => $o->getTitreOffre(),
+            'description' => $o->getDescriptionOffre(),
+            'datePublication' => $o->getDatePublicationOffre()?->format('Y-m-d'),
+            'dateLimite' => $o->getDateLimiteOffre()?->format('Y-m-d'),
+            'statut' => $o->getStatutOffre(),
+        ], $offres);
+
+        return $this->json($data);
+    }
+
+    // ADMIN - PUT PUBLISH PENDING OFFER
+    #[Route('/admin/offres/{id}/publish', name: 'admin_publish_offre', methods: ['PUT'])]
+    public function publishOffre(Request $request, int $id): JsonResponse
+    {
+        $idUser = $this->authService->getConnectedUser($request)['userId'];
+        if (!$this->authService->isAdmin($idUser)){
+            return $this->json(['error' => 'Accès refusé : utilisateur non administrateur'], 403);
+        }
+
+        $offre = $this->service->getOffre($id);
+        if (!$offre) {
+            return $this->json(['error' => 'Offre non trouvée'], 404);
+        }
+
+        try {
+            $this->service->publishOffre($offre);
+        } catch (Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 400);
+        }
+
+        return $this->json(['success' => true, 'id' => $offre->getId(), 'statut' => $offre->getStatutOffre()]);
     }
 }
