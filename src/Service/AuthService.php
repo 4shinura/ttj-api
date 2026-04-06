@@ -10,11 +10,13 @@ use App\Repository\UtilisateurRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Exception;
 
 class AuthService
 {
     private UtilisateurRepository $repository;
     private EntityManagerInterface $em;
+    private const JWT_SECRET = 'secretAPIttj2026';
 
     public function __construct(
         UtilisateurRepository $repository,
@@ -24,7 +26,7 @@ class AuthService
         $this->em = $em;
     }
 
-    public function login(string $email, string $password): Utilisateur|null
+    public function login(string $email, string $password): Utilisateur|null|JsonResponse
     {
         $user = $this->repository->findByEmail($email);
 
@@ -51,21 +53,43 @@ class AuthService
         return null;
     }
 
-    public function getConnectedUser(Request $request): JsonResponse|array
+    public function jwt_generate(array $payload): string
     {
-        $token = $request->cookies->get('access_token');
+        $header  = base64_encode(json_encode(['typ' => 'JWT']));
+        $payload = base64_encode(json_encode($payload));
+        $signature = base64_encode(hash_hmac('sha256', "$header.$payload", self::JWT_SECRET));
 
-        if (!$token) {
-            return new JsonResponse(['error' => 'Non authentifié'], 401);
+        return "$header.$payload.$signature";
+    }
+
+    public function jwt_decode(string $token): ?array
+    {
+        [$header, $payload, $signature] = explode('.', $token);
+
+        // Vérifie la signature
+        if ($signature !== base64_encode(hash_hmac('sha256', "$header.$payload", self::JWT_SECRET))) {
+            return null; // token invalide ou falsifié
         }
 
-        // $user = $authService->getUserFromToken($token);
+        return json_decode(base64_decode($payload), true);
+    }
 
-        // if (!$user) {
-        //     return new JsonResponse(['error' => 'Token invalide ou expiré'], 401);
-        // }
+    public function getConnectedUser(Request $request): array
+    {
+        $authHeader = $request->headers->get('Authorization', '');
 
-        return ['userId' => $token];
+        if (!str_starts_with($authHeader, 'Bearer ')) {
+            return ['error' => 'Non authentifié'];
+        }
+
+        $token   = substr($authHeader, 7);
+        $payload = $this->jwt_decode($token);
+
+        if (!$payload) {
+            return ['error' => 'Token invalide ou expiré'];
+        }
+
+        return ['userId' => $payload['user']['id']];
     }
 
     public function isRecruteur(int $id): bool
@@ -118,8 +142,4 @@ class AuthService
 
         return $utilisateur;
     }
-
-    // public function getCurrentUserId(): ?int
-    // {
-    // }
 }

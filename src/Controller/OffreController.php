@@ -140,7 +140,11 @@ final class OffreController extends AbstractController
     #[Route('/recruteurs/offres', name: 'offres_recruteur', methods: ['GET'])]
     public function voirOffresRecruteur(Request $request): JsonResponse
     {
-        $idUser = $this->authService->getConnectedUser($request)['userId'];
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isRecruteur($idUser)){
             return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
         }
@@ -162,7 +166,11 @@ final class OffreController extends AbstractController
     #[Route('/recruteurs/offres/{id}', name: 'offre_recruteur', methods: ['GET'])]
     public function voirOffreRecruteur(Request $request, int $id): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isRecruteur($idUser)) {
             return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
         }
@@ -194,7 +202,11 @@ final class OffreController extends AbstractController
     #[Route('/admin/offres', name: 'admin_pending_offers', methods: ['GET'])]
     public function getOffresByStatus(Request $request): JsonResponse
     {
-        $idUser = $this->authService->getConnectedUser($request)['userId'];
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)){
             return $this->json(['error' => 'Accès refusé : utilisateur non administrateur'], 403);
         }
@@ -217,7 +229,11 @@ final class OffreController extends AbstractController
     #[Route('/admin/offres/{id}/publish', name: 'admin_publish_offre', methods: ['PUT'])]
     public function publishOffre(Request $request, int $id): JsonResponse
     {
-        $idUser = $this->authService->getConnectedUser($request)['userId'];
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)){
             return $this->json(['error' => 'Accès refusé : utilisateur non administrateur'], 403);
         }

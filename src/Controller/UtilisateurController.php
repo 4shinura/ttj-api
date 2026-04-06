@@ -23,7 +23,11 @@ final class UtilisateurController extends AbstractController
     #[Route('/utilisateurs', name: 'admin_utilisateurs_list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)) {
             return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
         }
@@ -37,7 +41,11 @@ final class UtilisateurController extends AbstractController
     #[Route('/registers/', name: 'admin_registers_pending', methods: ['GET'])]
     public function listPendingRegistrations(Request $request): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)) {
             return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
         }
@@ -51,7 +59,11 @@ final class UtilisateurController extends AbstractController
     #[Route('/utilisateurs', name: 'admin_utilisateur_create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)) {
             return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
         }
@@ -99,7 +111,11 @@ final class UtilisateurController extends AbstractController
     #[Route('/utilisateurs/{id}', name: 'admin_utilisateur_update', methods: ['PUT'])]
     public function update(Request $request, int $id): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)) {
             return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
         }
@@ -137,7 +153,11 @@ final class UtilisateurController extends AbstractController
     #[Route('/utilisateurs/{id}', name: 'admin_utilisateur_delete', methods: ['DELETE'])]
     public function delete(Request $request, int $id): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)) {
             return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
         }
@@ -175,7 +195,11 @@ final class UtilisateurController extends AbstractController
     #[Route('/registers/valider', name: 'admin_register_validate', methods: ['PUT'])]
     public function validateRegistration(Request $request): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isAdmin($idUser)) {
             return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
         }

@@ -49,7 +49,11 @@ final class CandidatureController extends AbstractController
     #[Route('/recruteurs/offres/{offreId}/candidatures', name: 'recruteur_offre_candidatures', methods: ['GET'])]
     public function listForRecruteur(Request $request, int $offreId): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isRecruteur($idUser)) {
             return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
         }
@@ -73,7 +77,11 @@ final class CandidatureController extends AbstractController
     #[Route('/recruteurs/candidatures/{id}/statut', name: 'recruteur_candidature_update_statut', methods: ['PUT'])]
     public function updateStatut(Request $request, int $id): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isRecruteur($idUser)) {
             return $this->json(['error' => 'Accès refusé : utilisateur non recruteur'], 403);
         }
@@ -103,7 +111,11 @@ final class CandidatureController extends AbstractController
     #[Route('/candidats/candidatures', name: 'candidat_candidatures_list', methods: ['GET'])]
     public function listForCandidat(Request $request): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
        
         if (!$this->authService->isCandidat($idUser)) {
             return $this->json(['error' => 'Accès refusé : utilisateur non candidat'], 403);
@@ -118,7 +130,11 @@ final class CandidatureController extends AbstractController
     #[Route('/candidats/candidatures/{id}', name: 'candidat_candidature_show', methods: ['GET'])]
     public function showForCandidat(Request $request, int $id): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isCandidat($idUser)) {
             return $this->json(['error' => 'Accès refusé : utilisateur non candidat'], 403);
         }
@@ -138,7 +154,11 @@ final class CandidatureController extends AbstractController
     #[Route('/candidats/candidatures', name: 'candidat_candidature_create', methods: ['POST'])]
     public function createForCandidat(Request $request): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isCandidat($idUser)) {
             return $this->json(['error' => 'Accès refusé : utilisateur non candidat'], 403);
         }
@@ -177,7 +197,11 @@ final class CandidatureController extends AbstractController
     #[Route('/candidats/candidatures/{id}', name: 'candidat_candidature_delete', methods: ['DELETE'])]
     public function deleteForCandidat(Request $request, int $id): JsonResponse
     {
-        $idUser = (int) ($this->authService->getConnectedUser($request)['userId'] ?? 0);
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
         if (!$this->authService->isCandidat($idUser)) {
             return $this->json(['error' => 'Accès refusé : utilisateur non candidat'], 403);
         }
@@ -195,20 +219,4 @@ final class CandidatureController extends AbstractController
 
         return $this->json(['message' => 'Candidature supprimée']);
     }
-
-    // #[Route('/candidatures/{id}', name: 'candidature_delete', methods: ['DELETE'])]
-    // public function delete(int $id): JsonResponse
-    // {
-    //     $candidature = $this->service->getById($id);
-
-    //     if (!$candidature) {
-    //         return $this->json(['error' => 'Candidature non trouvée'], 404);
-    //     }
-
-    //     $this->service->delete($candidature);
-
-    //     return $this->json([
-    //         'message' => 'Candidature supprimée'
-    //     ]);
-    // }
 }

@@ -9,6 +9,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
+use Exception;
 
 #[Route("/api/auth")]
 class AuthController extends AbstractController
@@ -31,14 +32,16 @@ class AuthController extends AbstractController
         if (!$email || !$password) {
             return $this->json(['error' => 'Email et mot de passe requis'], 400);
         }
-
+        
+        
         $user = $this->service->login($email, $password);
+        
 
         if (!$user) {
             return $this->json(['error' => 'Identifiants invalides'], 401);
         }
 
-        $response = $this->json([
+        $token = $this->service->jwt_generate([
             'message' => 'Connexion réussie',
             'user' => [
                 'id' => $user->getId(),
@@ -50,17 +53,7 @@ class AuthController extends AbstractController
             ]
         ]);
 
-        $response->headers->setCookie(
-            Cookie::create('access_token')
-                ->withValue($user->getId())
-                ->withExpires(time() + 3600)
-                ->withPath('/')
-                ->withSecure(false)    // passe à true en production (HTTPS)
-                ->withHttpOnly(true)
-                ->withSameSite(Cookie::SAMESITE_STRICT)
-        );
-
-        return $response;
+        return $this->json(['token' => $token]);
     }
 
     #[Route('/recruteur/register', name: 'recruteur_register', methods: ['POST'])]
@@ -111,26 +104,5 @@ class AuthController extends AbstractController
             'type' => $type,
             'statut' => $user->getStatutUtilisateur(),
         ], 201);
-    }
-
-    #[Route('/logout', name: 'api_logout', methods: ['POST'])]
-    public function logout(): JsonResponse
-    {
-        $response = $this->json([
-            'message' => 'Déconnexion réussie'
-        ]);
-
-        // Supprimer le cookie access_token en le rendant expiré
-        $response->headers->setCookie(
-            Cookie::create('access_token')
-                ->withValue('')
-                ->withExpires(time() - 3600) // Expire immédiatement
-                ->withPath('/')
-                ->withSecure(false)    // même configuration que pour le login
-                ->withHttpOnly(true)
-                ->withSameSite(Cookie::SAMESITE_STRICT)
-        );
-
-        return $response;
     }
 }
