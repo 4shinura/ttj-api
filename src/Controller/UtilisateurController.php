@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Candidat;
 use App\Entity\Recruteur;
+use App\Entity\Administrateur;
 use App\Entity\Utilisateur;
 use App\Repository\UtilisateurRepository;
 use App\Service\AuthService;
@@ -110,10 +111,12 @@ final class UtilisateurController extends AbstractController
             return $this->json(['error' => 'Email déjà utilisé'], 409);
         }
 
-        if ($data['type'] === 'candidat') {
-            $utilisateur = new Candidat();
-        } else {
+        if ($data['type'] === 'administrateur') {
+            $utilisateur = new Administrateur();
+        } elseif ($data['type'] === 'recruteur') {
             $utilisateur = new Recruteur();
+        } else {
+            $utilisateur = new Candidat();
         }
 
         $utilisateur->setNomUtilisateur($data['nom']);
@@ -188,7 +191,7 @@ final class UtilisateurController extends AbstractController
         }
 
         // Empêcher la suppression d'un admin
-        if ($utilisateur->getStatutUtilisateur() === 'admin') {
+        if ($utilisateur->getStatutUtilisateur() === 'administrateur') {
             return $this->json(['error' => 'Impossible de supprimer un administrateur'], 403);
         }
 
@@ -200,7 +203,7 @@ final class UtilisateurController extends AbstractController
 
     private function mapUtilisateurToArray(Utilisateur $user): array
     {
-        $type = $user instanceof Candidat ? 'candidat' : ($user instanceof Recruteur ? 'recruteur' : 'inconnu');
+        $type = $user instanceof Candidat ? 'candidat' : ($user instanceof Recruteur ? 'recruteur' : ($user instanceof Administrateur ? 'administrateur' : 'inconnu'));
 
         return [
             'id' => $user->getId(),

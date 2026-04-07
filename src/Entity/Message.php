@@ -17,8 +17,8 @@ class Message
     #[ORM\Column(length: 400)]
     private ?string $contenu_Message = null;
 
-    #[ORM\Column(type: Types::DATE_MUTABLE)]
-    private ?\DateTime $dateEnvoi_Message = null;
+    #[ORM\Column(type: 'datetime_immutable')]
+    private ?\DateTimeImmutable $dateEnvoi_Message = null;
 
     #[ORM\ManyToOne(inversedBy: 'messages')]
     #[ORM\JoinColumn(nullable: false)]
@@ -45,12 +45,12 @@ class Message
         return $this;
     }
 
-    public function getDateEnvoiMessage(): ?\DateTime
+    public function getDateEnvoiMessage(): ?\DateTimeImmutable
     {
         return $this->dateEnvoi_Message;
     }
 
-    public function setDateEnvoiMessage(\DateTime $dateEnvoi_Message): static
+    public function setDateEnvoiMessage(\DateTimeImmutable $dateEnvoi_Message): static
     {
         $this->dateEnvoi_Message = $dateEnvoi_Message;
 
