@@ -94,15 +94,15 @@ final class UtilisateurController extends AbstractController
             return $this->json(['error' => 'Payload invalide'], 400);
         }
 
-        $requiredFields = ['nom', 'prenom', 'email', 'motDePasse', 'type'];
+        $requiredFields = ['nom', 'prenom', 'email', 'password', 'type'];
         foreach ($requiredFields as $field) {
             if (!isset($data[$field]) || empty($data[$field])) {
                 return $this->json(['error' => "Champ requis manquant : $field"], 400);
             }
         }
 
-        if (!in_array($data['type'], ['candidat', 'recruteur'])) {
-            return $this->json(['error' => 'Type invalide : doit être "candidat" ou "recruteur"'], 400);
+        if (!in_array($data['type'], ['candidat', 'recruteur', 'administrateur'])) {
+            return $this->json(['error' => 'Type invalide : doit être "candidat" ou "recruteur" ou "administrateur".'], 400);
         }
 
         // Vérifier si email existe déjà
@@ -122,7 +122,7 @@ final class UtilisateurController extends AbstractController
         $utilisateur->setNomUtilisateur($data['nom']);
         $utilisateur->setPrenomUtilisateur($data['prenom']);
         $utilisateur->setEmailUtilisateur($data['email']);
-        $utilisateur->setMdpUtilisateur(password_hash($data['motDePasse'], PASSWORD_BCRYPT));
+        $utilisateur->setMdpUtilisateur(password_hash($data['password'], PASSWORD_BCRYPT));
         $utilisateur->setStatutUtilisateur('actif');
 
         $this->utilisateurRepo->getEntityManager()->persist($utilisateur);
