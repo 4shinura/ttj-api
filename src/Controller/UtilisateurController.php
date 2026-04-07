@@ -38,6 +38,26 @@ final class UtilisateurController extends AbstractController
         return $this->json($data);
     }
 
+    #[Route('/utilisateurs/{id}', name: 'admin_utilisateur_show', methods: ['GET'])]
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $response = $this->authService->getConnectedUser($request);
+        if (isset($response['error'])) {
+            return new JsonResponse(['error' => $response['error']], 401);
+        }
+        $idUser = (int) ($response['userId'] ?? null);
+        if (!$this->authService->isAdmin($idUser)) {
+            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        }
+
+        $utilisateur = $this->utilisateurRepo->find($id);
+        if (!$utilisateur) {
+            return $this->json(['error' => 'Utilisateur non trouvé'], 404);
+        }
+
+        return $this->json($this->mapUtilisateurToArray($utilisateur));
+    }
+
     #[Route('/registers/', name: 'admin_registers_pending', methods: ['GET'])]
     public function listPendingRegistrations(Request $request): JsonResponse
     {

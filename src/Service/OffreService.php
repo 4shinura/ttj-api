@@ -43,7 +43,7 @@ class OffreService
         $offre->setDescriptionOffre($data['description'] ?? '');
         $offre->setDatePublicationOffre(new \DateTime($data['datePublication'] ?? 'now'));
         $offre->setDateLimiteOffre(new \DateTime($data['dateLimite'] ?? 'now'));
-        $offre->setStatutOffre($data['statut'] ?? '');
+        $offre->setStatutOffre('pending');
 
         // ici tu peux gérer le recruteur si tu passes l'id
         if (!empty($data['recruteur'])) {
