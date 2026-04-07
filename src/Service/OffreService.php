@@ -64,9 +64,12 @@ class OffreService
         if (isset($data['description'])) $offre->setDescriptionOffre($data['description']);
         if (isset($data['datePublication'])) $offre->setDatePublicationOffre(new \DateTime($data['datePublication']));
         if (isset($data['dateLimite'])) $offre->setDateLimiteOffre(new \DateTime($data['dateLimite']));
-        if (isset($data['statut'])) $offre->setStatutOffre($data['statut']);
-        $recruteur = $this->recruteurRepository->find($data['recruteur']);
-        if (isset($data['recruteur'])) $offre->setRecruteurOffre($recruteur);
+
+        // ici tu peux gérer le recruteur si tu passes l'id
+        if (!empty($data['recruteur'])) {
+            $recruteur = $this->recruteurRepository->find($data['recruteur']);
+            $offre->setRecruteurOffre($recruteur);
+        }
 
         $this->em->flush();
 
