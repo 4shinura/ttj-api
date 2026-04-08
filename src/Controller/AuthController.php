@@ -33,12 +33,14 @@ class AuthController extends AbstractController
             return $this->json(['error' => 'Email et mot de passe requis'], 400);
         }
         
-        
         $user = $this->service->login($email, $password);
-        
 
         if (!$user) {
             return $this->json(['error' => 'Identifiants invalides'], 401);
+        }
+
+        if ($user->getStatutUtilisateur() !== 'actif') {
+            return $this->json(['error' => 'Votre compte a été désactivé ou n\'a pas encore été approuvé'], 403);
         }
 
         $token = $this->service->jwt_generate([

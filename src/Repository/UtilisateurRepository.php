@@ -13,6 +13,15 @@ class UtilisateurRepository extends ServiceEntityRepository
         parent::__construct($registry, Utilisateur::class);
     }
 
+    public function findNotPendingUsers(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.statut_Utilisateur != :status')
+            ->setParameter('status', 'pending')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findByEmail(string $email): ?Utilisateur
     {
         return $this->createQueryBuilder('u')

@@ -57,7 +57,7 @@ class MessageRepository extends ServiceEntityRepository
             )
             ->setParameter('userId', $userId)
             ->setParameter('correspondantId', $correspondantId)
-            ->orderBy('m.dateEnvoi_Message', 'DESC')
+            ->orderBy('m.dateEnvoi_Message', 'ASC')
             ->getQuery()
             ->getResult()
         ;

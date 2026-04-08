@@ -33,7 +33,7 @@ final class UtilisateurController extends AbstractController
             return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
         }
 
-        $utilisateurs = $this->utilisateurRepo->findAll();
+        $utilisateurs = $this->utilisateurRepo->findNotPendingUsers();
         $data = array_map([$this, 'mapUtilisateurToArray'], $utilisateurs);
 
         return $this->json($data);
@@ -163,8 +163,8 @@ final class UtilisateurController extends AbstractController
             }
             $utilisateur->setEmailUtilisateur($data['email']);
         }
-        if (isset($data['motDePasse'])) {
-            $utilisateur->setMdpUtilisateur(password_hash($data['motDePasse'], PASSWORD_BCRYPT));
+        if (isset($data['password'])) {
+            $utilisateur->setMdpUtilisateur(password_hash($data['password'], PASSWORD_BCRYPT));
         }
         if (isset($data['statut'])) $utilisateur->setStatutUtilisateur($data['statut']);
 
