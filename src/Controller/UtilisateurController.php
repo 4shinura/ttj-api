@@ -29,9 +29,9 @@ final class UtilisateurController extends AbstractController
             return new JsonResponse(['error' => $response['error']], 401);
         }
         $idUser = (int) ($response['userId'] ?? null);
-        if (!$this->authService->isAdmin($idUser)) {
-            return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
-        }
+        // if (!$this->authService->isAdmin($idUser)) {
+        //     return $this->json(['error' => 'Accès refusé : droits administrateur requis'], 403);
+        // }
 
         $utilisateurs = $this->utilisateurRepo->findNotPendingUsers();
         $data = array_map([$this, 'mapUtilisateurToArray'], $utilisateurs);

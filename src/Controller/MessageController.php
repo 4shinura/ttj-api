@@ -178,6 +178,7 @@ final class MessageController extends AbstractController
 
         return $this->json([
             'correspondant' => [
+                'id' => $correspondant->getId(),
                 'nom' => $correspondant->getNomUtilisateur(),
                 'prenom' => $correspondant->getPrenomUtilisateur(),
                 'email' => $correspondant->getEmailUtilisateur(),
