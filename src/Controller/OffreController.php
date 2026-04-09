@@ -28,15 +28,7 @@ final class OffreController extends AbstractController
     public function getOffres(): JsonResponse
     {
         $offres = $this->service->getPublishedOffres();
-        $data = array_map(fn(Offre $o) => [
-            'id' => $o->getId(),
-            'type' => $o->getTypeOffre(),
-            'titre' => $o->getTitreOffre(),
-            'description' => $o->getDescriptionOffre(),
-            'datePublication' => $o->getDatePublicationOffre()?->format('Y-m-d'),
-            'dateLimite' => $o->getDateLimiteOffre()?->format('Y-m-d'),
-            'statut' => $o->getStatutOffre(),
-        ], $offres);
+        $data = array_map(fn(Offre $o) => $this->mapOffreWithRecruteurAndEntreprise($o), $offres);
 
         return $this->json($data);
     }
@@ -47,7 +39,15 @@ final class OffreController extends AbstractController
         $offre = $this->service->getPublishedOffre($id);
         if (!$offre) return $this->json(['error' => 'Offre non trouvée'], 404);
 
-        return $this->json([
+        return $this->json($this->mapOffreWithRecruteurAndEntreprise($offre));
+    }
+
+    private function mapOffreWithRecruteurAndEntreprise(Offre $offre): array
+    {
+        $recruteur = $offre->getRecruteurOffre();
+        $entreprise = $recruteur?->getEntrepriseRecruteur();
+
+        return [
             'id' => $offre->getId(),
             'type' => $offre->getTypeOffre(),
             'titre' => $offre->getTitreOffre(),
@@ -55,7 +55,18 @@ final class OffreController extends AbstractController
             'datePublication' => $offre->getDatePublicationOffre()?->format('Y-m-d'),
             'dateLimite' => $offre->getDateLimiteOffre()?->format('Y-m-d'),
             'statut' => $offre->getStatutOffre(),
-        ]);
+            'recruteur' => $recruteur ? [
+                'nom' => $recruteur->getNomUtilisateur(),
+                'prenom' => $recruteur->getPrenomUtilisateur(),
+                'email' => $recruteur->getEmailUtilisateur(),
+            ] : null,
+            'entreprise' => $entreprise ? [
+                'id' => $entreprise->getId(),
+                'raisonSociale' => $entreprise->getRaisonSocialeEntreprise(),
+                'adresse' => $entreprise->getAdresseEntreprise(),
+                'tel' => $entreprise->getTelEntreprise(),
+            ] : null,
+        ];
     }
 
         #[Route('/recruteurs/offres', name: 'offres_recruteur', methods: ['GET'])]

@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Candidat;
 use App\Entity\Recruteur;
 use App\Entity\Administrateur;
+use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Repository\UtilisateurRepository;
 use App\Service\AuthService;
@@ -119,6 +120,19 @@ final class UtilisateurController extends AbstractController
             $utilisateur = new Candidat();
         }
 
+        if ($data['type'] === 'recruteur') {
+            if (empty($data['entrepriseId']) || !is_numeric($data['entrepriseId'])) {
+                return $this->json(['error' => 'Entreprise requise pour créer un recruteur'], 400);
+            }
+
+            $entreprise = $this->utilisateurRepo->getEntityManager()->getRepository(Entreprise::class)->find((int) $data['entrepriseId']);
+            if (!$entreprise) {
+                return $this->json(['error' => 'Entreprise non trouvée'], 404);
+            }
+
+            $utilisateur->setEntrepriseRecruteur($entreprise);
+        }
+
         $utilisateur->setNomUtilisateur($data['nom']);
         $utilisateur->setPrenomUtilisateur($data['prenom']);
         $utilisateur->setEmailUtilisateur($data['email']);
@@ -153,25 +167,100 @@ final class UtilisateurController extends AbstractController
             return $this->json(['error' => 'Payload invalide'], 400);
         }
 
-        if (isset($data['nom'])) $utilisateur->setNomUtilisateur($data['nom']);
-        if (isset($data['prenom'])) $utilisateur->setPrenomUtilisateur($data['prenom']);
         if (isset($data['email'])) {
-            // Vérifier si email existe déjà pour un autre utilisateur
             $existingUser = $this->utilisateurRepo->findByEmail($data['email']);
             if ($existingUser && $existingUser->getId() !== $id) {
                 return $this->json(['error' => 'Email déjà utilisé'], 409);
             }
-            $utilisateur->setEmailUtilisateur($data['email']);
         }
-        if (isset($data['password'])) {
-            $utilisateur->setMdpUtilisateur(password_hash($data['password'], PASSWORD_BCRYPT));
+
+        if (isset($data['type']) && !in_array($data['type'], ['candidat', 'recruteur', 'administrateur'])) {
+            return $this->json(['error' => 'Type invalide : doit être "candidat", "recruteur" ou "administrateur".'], 400);
         }
-        if (isset($data['statut'])) $utilisateur->setStatutUtilisateur($data['statut']);
-        // if (isset($data['type'])) $utilisateur->setTypeUtilisateur($data['type']);
 
-        $this->utilisateurRepo->getEntityManager()->flush();
+        $currentType = $utilisateur instanceof Candidat ? 'candidat' : ($utilisateur instanceof Recruteur ? 'recruteur' : 'administrateur');
+        if (isset($data['type']) && $currentType !== $data['type']) {
+            if ($utilisateur->getMessages()->count() > 0 || $utilisateur->getReceivedMessages()->count() > 0) {
+                return $this->json(['error' => 'Impossible de changer le type : l’utilisateur est lié à des messages'], 400);
+            }
 
-        return $this->json($this->mapUtilisateurToArray($utilisateur));
+            if ($utilisateur instanceof Candidat && count($utilisateur->getCandidatures()) > 0) {
+                return $this->json(['error' => 'Impossible de changer le type : le candidat est lié à une ou plusieurs candidatures'], 400);
+            }
+
+            if ($utilisateur instanceof Recruteur && count($utilisateur->getOffres()) > 0) {
+                return $this->json(['error' => 'Impossible de changer le type : le recruteur est lié à une ou plusieurs offres'], 400);
+            }
+
+            if ($data['type'] === 'recruteur') {
+                if (empty($data['entrepriseId']) || !is_numeric($data['entrepriseId'])) {
+                    return $this->json(['error' => 'Entreprise requise pour convertir un utilisateur en recruteur'], 400);
+                }
+
+                $entreprise = $this->utilisateurRepo->getEntityManager()->getRepository(Entreprise::class)->find((int) $data['entrepriseId']);
+                if (!$entreprise) {
+                    return $this->json(['error' => 'Entreprise non trouvée pour l’ID fourni'], 404);
+                }
+            }
+        }
+
+        if (isset($data['statut']) && $data['statut'] !== $utilisateur->getStatutUtilisateur()) {
+            if ($utilisateur->getMessages()->count() > 0 || $utilisateur->getReceivedMessages()->count() > 0) {
+                return $this->json(['error' => 'Impossible de modifier le statut : l’utilisateur est lié à des messages'], 403);
+            }
+        }
+
+        $em = $this->utilisateurRepo->getEntityManager();
+        $em->beginTransaction(); // Démarre une transaction pour la sécurité
+
+        try {
+            // Gestion des champs standards
+            if (isset($data['nom'])) $utilisateur->setNomUtilisateur($data['nom']);
+            if (isset($data['prenom'])) $utilisateur->setPrenomUtilisateur($data['prenom']);
+            if (isset($data['email'])) {
+                $utilisateur->setEmailUtilisateur($data['email']);
+            }
+            if (isset($data['password'])) {
+                $utilisateur->setMdpUtilisateur(password_hash($data['password'], PASSWORD_BCRYPT));
+            }
+            if (isset($data['statut'])) $utilisateur->setStatutUtilisateur($data['statut']);
+
+            // Gestion du changement de type (nouveau)
+            if (isset($data['type']) && $currentType !== $data['type']) {
+                // Créer une nouvelle instance de la classe appropriée
+                if ($data['type'] === 'administrateur') {
+                    $newUtilisateur = new Administrateur();
+                } elseif ($data['type'] === 'recruteur') {
+                    $newUtilisateur = new Recruteur();
+                } else {
+                    $newUtilisateur = new Candidat();
+                }
+
+                // Copier les données communes
+                $newUtilisateur->setNomUtilisateur($utilisateur->getNomUtilisateur());
+                $newUtilisateur->setPrenomUtilisateur($utilisateur->getPrenomUtilisateur());
+                $newUtilisateur->setEmailUtilisateur($utilisateur->getEmailUtilisateur());
+                $newUtilisateur->setMdpUtilisateur($utilisateur->getMdpUtilisateur());
+                $newUtilisateur->setStatutUtilisateur($utilisateur->getStatutUtilisateur());
+
+                if ($data['type'] === 'recruteur') {
+                    $newUtilisateur->setEntrepriseRecruteur($entreprise);
+                }
+
+                // Supprimer l'ancienne entité et persister la nouvelle
+                $em->remove($utilisateur);
+                $em->persist($newUtilisateur);
+                $utilisateur = $newUtilisateur; // Mettre à jour la référence pour la réponse
+            }
+
+            $em->flush();
+            $em->commit(); // Valider la transaction
+
+            return $this->json($this->mapUtilisateurToArray($utilisateur));
+        } catch (\Exception $e) {
+            $em->rollback(); // Annuler en cas d'erreur
+            return $this->json(['error' => 'Erreur lors de la mise à jour : ' . $e->getMessage()], 500);
+        }
     }
 
     #[Route('/utilisateurs/{id}', name: 'admin_utilisateur_delete', methods: ['DELETE'])]
@@ -194,6 +283,11 @@ final class UtilisateurController extends AbstractController
         // Empêcher la suppression d'un admin
         if ($utilisateur->getStatutUtilisateur() === 'administrateur') {
             return $this->json(['error' => 'Impossible de supprimer un administrateur'], 403);
+        }
+
+        // Empêcher la suppression si l'utilisateur est lié à des messages
+        if ($utilisateur->getMessages()->count() > 0 || $utilisateur->getReceivedMessages()->count() > 0) {
+            return $this->json(['error' => 'Impossible de supprimer l’utilisateur : il est lié à des messages'], 403);
         }
 
         $this->utilisateurRepo->getEntityManager()->remove($utilisateur);

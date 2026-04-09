@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Request;
 
-#[Route('/api/candidats')]
+#[Route('/api/candidat')]
 class CandidatController extends AbstractController
 {
     public function __construct(private CandidatService $service)

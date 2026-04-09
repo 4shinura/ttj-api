@@ -22,6 +22,7 @@ class Recruteur extends Utilisateur
 
     public function __construct()
     {
+        parent::__construct();
         $this->offres = new ArrayCollection();
     }
 

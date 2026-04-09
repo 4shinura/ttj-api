@@ -69,7 +69,7 @@ class Entreprise
         return $this->tel_Entreprise;
     }
 
-    public function setTelEntreprise(string $tel_Entreprise): static
+    public function setTelEntreprise(int $tel_Entreprise): static
     {
         $this->tel_Entreprise = $tel_Entreprise;
 
