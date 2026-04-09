@@ -22,36 +22,6 @@ final class MessageController extends AbstractController
         private EntityManagerInterface $em
     ) {}
 
-    // #[Route('/sent', name: 'message_sent_list', methods: ['GET'])]
-    // public function sentList(Request $request): JsonResponse
-    // {
-    //     $response = $this->authService->getConnectedUser($request);
-    //     if (isset($response['error'])) {
-    //         return new JsonResponse(['error' => $response['error']], 401);
-    //     }
-    //     $userId = (int) ($response['userId'] ?? null);
-
-    //     $messages = $this->messageRepo->findSentMessages($userId);
-    //     $data = array_map([$this, 'mapMessageToArray'], $messages);
-
-    //     return $this->json($data);
-    // }
-
-    // #[Route('/received', name: 'message_received_list', methods: ['GET'])]
-    // public function receivedList(Request $request): JsonResponse
-    // {
-    //     $response = $this->authService->getConnectedUser($request);
-    //     if (isset($response['error'])) {
-    //         return new JsonResponse(['error' => $response['error']], 401);
-    //     }
-    //     $userId = (int) ($response['userId'] ?? null);
-
-    //     $messages = $this->messageRepo->findReceivedMessages($userId);
-    //     $data = array_map([$this, 'mapMessageToArray'], $messages);
-
-    //     return $this->json($data);
-    // }
-
     #[Route('/correspondants', name: 'message_correspondents', methods: ['GET'])]
     public function correspondents(Request $request): JsonResponse
     {
@@ -194,10 +164,12 @@ final class MessageController extends AbstractController
             'contenu' => $message->getContenuMessage(),
             'dateEnvoi' => $message->getDateEnvoiMessage()?->format('Y-m-d H:i:s'),
             'emetteur' => [
+                'id' => $message->getEmetteurMessage()->getId(),
                 'nom' => $message->getEmetteurMessage()->getNomUtilisateur(),
                 'prenom' => $message->getEmetteurMessage()->getPrenomUtilisateur(),
             ],
             'destinataire' => [
+                'id' => $message->getDestinataireMessage()->getId(),
                 'nom' => $message->getDestinataireMessage()->getNomUtilisateur(),
                 'prenom' => $message->getDestinataireMessage()->getPrenomUtilisateur(),
             ],
