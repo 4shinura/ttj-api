@@ -187,7 +187,7 @@ final class CandidatureController extends AbstractController
         $candidature->setCandidat($candidat);
         $candidature->setOffre($offre);
         $candidature->setDateCandidature(new \DateTime());
-        $candidature->setStatutCandidature('En attente');
+        $candidature->setStatutCandidature('pending');
 
         $this->service->create($candidature);
 

@@ -167,6 +167,7 @@ final class UtilisateurController extends AbstractController
             $utilisateur->setMdpUtilisateur(password_hash($data['password'], PASSWORD_BCRYPT));
         }
         if (isset($data['statut'])) $utilisateur->setStatutUtilisateur($data['statut']);
+        // if (isset($data['type'])) $utilisateur->setTypeUtilisateur($data['type']);
 
         $this->utilisateurRepo->getEntityManager()->flush();
 
